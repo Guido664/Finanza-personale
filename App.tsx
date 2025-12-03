@@ -12,10 +12,11 @@ import TransactionFilter from './components/TransactionFilter';
 import SearchBar from './components/SearchBar';
 import ImportCSVModal from './components/ImportCSVModal';
 import FinancialAnalysisModal from './components/FinancialAnalysisModal';
+import UpdatePasswordModal from './components/UpdatePasswordModal';
 import Auth from './components/Auth';
 import { supabase } from './supabaseClient';
 import { Session } from '@supabase/supabase-js';
-import { PlusIcon, TagIcon, UserCircleIcon, ArrowDownTrayIcon, ArrowUpTrayIcon, ArrowPathIcon, DatabaseIcon, ExclamationTriangleIcon, BuildingLibraryIcon, LightBulbIcon } from './components/Icons';
+import { PlusIcon, TagIcon, UserCircleIcon, ArrowDownTrayIcon, ArrowUpTrayIcon, ArrowPathIcon, DatabaseIcon, ExclamationTriangleIcon, BuildingLibraryIcon, LightBulbIcon, KeyIcon } from './components/Icons';
 
 export type Filter = {
   mode: 'month' | 'range';
@@ -39,6 +40,7 @@ const App: React.FC = () => {
   const [isDeleteConfirmationOpen, setDeleteConfirmationOpen] = useState(false);
   const [isImportModalOpen, setImportModalOpen] = useState(false);
   const [isAnalysisModalOpen, setAnalysisModalOpen] = useState(false);
+  const [isUpdatePasswordModalOpen, setUpdatePasswordModalOpen] = useState(false);
   
   // Editing/Deleting states
   const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
@@ -74,8 +76,12 @@ const App: React.FC = () => {
 
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
+    } = supabase.auth.onAuthStateChange((event, session) => {
       setSession(session);
+      // Se l'utente clicca sul link di reset password nell'email, viene loggato e riceve l'evento PASSWORD_RECOVERY
+      if (event === 'PASSWORD_RECOVERY') {
+        setUpdatePasswordModalOpen(true);
+      }
     });
 
     return () => subscription.unsubscribe();
@@ -109,15 +115,7 @@ const App: React.FC = () => {
         color: c.color
       }));
       
-      // Merge default categories if they don't exist (optional logic, simplified here to just use DB)
-      // If DB is empty, user might want defaults. Let's rely on DB being source of truth.
-      // If DB is empty and it's a new user, we could insert defaults, but let's keep it simple.
       if (mappedCategories.length === 0) {
-         // Optionally insert defaults here if needed, or just show defaults in UI logic
-         // For now, we mix DB categories with defaults if DB is empty to avoid UI break, 
-         // but strictly we should upsert defaults on signup.
-         // Let's assume user starts fresh. We will use a local variable to merge for display if needed
-         // or insert them into DB. Let's insert them into DB if empty to persist customisation.
          if (categoriesData.length === 0) {
              const { data: insertedDefaults } = await supabase.from('categories').insert(
                  DEFAULT_CATEGORIES.map(c => ({ user_id: session.user.id, name: c.name, color: c.color }))
@@ -184,7 +182,7 @@ const App: React.FC = () => {
       }
   }, [accounts, loadingData, session]);
 
-  // Generate recurring transactions Logic (Updated for Supabase)
+  // Generate recurring transactions Logic
   useEffect(() => {
     if (!session || recurringTransactions.length === 0) return;
     
@@ -196,7 +194,6 @@ const App: React.FC = () => {
 
         recurringTransactions.forEach(rt => {
             let nextDueDate = new Date(rt.nextDueDate);
-            // Copy date to avoid reference issues
             let currentDatePointer = new Date(nextDueDate);
 
             if (currentDatePointer <= today) {
@@ -234,12 +231,12 @@ const App: React.FC = () => {
                     await supabase.from('recurring_transactions').update({ next_due_date: update.next_due_date }).eq('id', update.id);
                 }
             }
-            fetchData(); // Refresh data
+            fetchData(); 
         }
     };
     
     checkRecurring();
-  }, [recurringTransactions, session, fetchData]); // Dependencies
+  }, [recurringTransactions, session, fetchData]); 
 
   
   const availableYears = useMemo(() => {
@@ -254,12 +251,10 @@ const App: React.FC = () => {
   }, [selectedAccountId, accounts]);
 
   const filteredTransactions = useMemo(() => {
-    // 1. Filter by account
     const accountFiltered = selectedAccountId === 'all'
       ? transactions
       : transactions.filter(t => t.accountId === selectedAccountId);
 
-    // 2. Filter by date
     const dateFiltered = accountFiltered.filter(t => {
       const transactionDate = new Date(t.date);
       if (filter.mode === 'month') {
@@ -282,12 +277,10 @@ const App: React.FC = () => {
       return true;
     });
     
-    // 3. Filter by type
     const typeFiltered = typeFilter === 'all'
       ? dateFiltered
       : dateFiltered.filter(t => t.type === typeFilter);
 
-    // 4. Filter by search query
     if (!searchQuery) return typeFiltered;
     const lowerCaseQuery = searchQuery.toLowerCase();
     return typeFiltered.filter(t => 
@@ -325,8 +318,7 @@ const App: React.FC = () => {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  // CRUD Handlers - Updated for Supabase
-
+  // CRUD Handlers
   const handleOpenAddTransactionModal = () => {
     setEditingTransaction(null);
     setAddTransactionModalOpen(true);
@@ -346,7 +338,6 @@ const App: React.FC = () => {
     
     try {
         if ('id' in data) {
-            // Update
             const { error } = await supabase.from('transactions').update({
                 account_id: data.accountId,
                 category_id: data.categoryId,
@@ -357,7 +348,6 @@ const App: React.FC = () => {
             }).eq('id', data.id);
             if (error) throw error;
         } else {
-            // Insert
             const { error } = await supabase.from('transactions').insert([{
                 user_id: session.user.id,
                 account_id: data.accountId,
@@ -426,10 +416,9 @@ const App: React.FC = () => {
             currency: account.currency
         }]);
         if (error) throw error;
-        fetchData(); // Refetch to get IDs
+        fetchData();
         if (isFirstAccountModalOpen) {
             setFirstAccountModalOpen(false);
-            // We set 'all' as default, logic in useEffect will pick first if needed but re-fetching might take a ms
         }
     } catch (e) {
         alert("Errore creazione conto.");
@@ -454,9 +443,6 @@ const App: React.FC = () => {
   const confirmDeleteAccount = async () => {
     if (!deletingAccountId) return;
     try {
-        // Cascade delete handled by DB usually, but accounts table has cascade in definition? 
-        // If not, we rely on Supabase cascade if configured, or manual.
-        // My SQL schema included `on delete cascade` for foreign keys, so deleting account deletes transactions.
         const { error } = await supabase.from('accounts').delete().eq('id', deletingAccountId);
         if (error) throw error;
         
@@ -578,20 +564,15 @@ const App: React.FC = () => {
             }
         }
         
-        // Refresh local categories to make sure mapping works for existing ones too
         const currentCategories = [...categories]; 
-        // Add just created ones to local array for lookup
-        // Note: Ideally we refetch, but for ID lookup loop below we need them now.
 
         // 2. Prepare transactions
         const dbTransactions = transactionsToImport.map(t => {
             let categoryId = t.categoryId;
             if (t.type === 'expense' && t.categoryName && !categoryId) {
-                // Try finding in newly created
                 const newId = createdCategoriesMap.get(t.categoryName.toLowerCase());
                 if (newId) categoryId = newId;
                 else {
-                    // Try finding in existing
                     const existing = currentCategories.find(c => c.name.toLowerCase() === t.categoryName?.toLowerCase());
                     if (existing) categoryId = existing.id;
                 }
@@ -625,8 +606,6 @@ const App: React.FC = () => {
   const handleDeleteAllData = async () => {
     if (!session) return;
     try {
-        // Due to foreign keys cascading, deleting accounts deletes transactions and recurring.
-        // We delete categories separately.
         await supabase.from('accounts').delete().neq('id', '00000000-0000-0000-0000-000000000000'); // Delete all
         await supabase.from('categories').delete().neq('id', '00000000-0000-0000-0000-000000000000');
         fetchData();
@@ -717,6 +696,11 @@ const App: React.FC = () => {
                       <button onClick={handleExportCSV} className="w-full text-left flex items-center gap-3 px-4 py-3 text-sm text-slate-700 hover:bg-slate-100">
                           <ArrowDownTrayIcon className="w-5 h-5 text-slate-500" />
                           Esporta CSV
+                      </button>
+                       <hr className="my-1 border-slate-100"/>
+                       <button onClick={() => { setUpdatePasswordModalOpen(true); setProfileMenuOpen(false); }} className="w-full text-left flex items-center gap-3 px-4 py-3 text-sm text-slate-700 hover:bg-slate-100">
+                          <KeyIcon className="w-5 h-5 text-slate-500" />
+                          Cambia Password
                       </button>
                       <hr className="my-1 border-slate-100"/>
                       <button onClick={handleSignOut} className="w-full text-left flex items-center gap-3 px-4 py-3 text-sm text-slate-700 hover:bg-slate-100">
@@ -865,6 +849,13 @@ const App: React.FC = () => {
           transactions={filteredTransactions}
           categories={categories}
           filter={filter}
+        />
+      )}
+      
+      {isUpdatePasswordModalOpen && (
+        <UpdatePasswordModal
+          isOpen={isUpdatePasswordModalOpen}
+          onClose={() => setUpdatePasswordModalOpen(false)}
         />
       )}
 

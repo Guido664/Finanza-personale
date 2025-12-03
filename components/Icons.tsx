@@ -1,3 +1,4 @@
+
 import React from 'react';
 
 type IconProps = React.SVGProps<SVGSVGElement>;
@@ -115,4 +116,10 @@ export const LightBulbIcon: React.FC<IconProps> = (props) => (
     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" {...props}>
         <path strokeLinecap="round" strokeLinejoin="round" d="M12 18v-5.25m0 0a6.01 6.01 0 0 0 1.5-1.832 6.01 6.01 0 0 0 0-5.636 6.01 6.01 0 0 0-1.5-1.832m0 9.3 0-9.3m0 9.3a6.01 6.01 0 0 1-1.5-1.832 6.01 6.01 0 0 1 0-5.636 6.01 6.01 0 0 1 1.5-1.832M12 18.75v-5.25m0 5.25a2.25 2.25 0 0 1-2.25-2.25m2.25 2.25a2.25 2.25 0 0 0 2.25-2.25M12 3.75a2.25 2.25 0 0 1 2.25 2.25m-4.5 0A2.25 2.25 0 0 1 12 3.75m0 0v-2.25m0 0a2.25 2.25 0 0 0-2.25 2.25m2.25-2.25a2.25 2.25 0 0 1 2.25 2.25m0 0A2.25 2.25 0 0 1 12 18.75m-2.25-2.25a2.25 2.25 0 0 0 2.25 2.25" />
     </svg>
+);
+
+export const KeyIcon: React.FC<IconProps> = (props) => (
+  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" {...props}>
+    <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 5.25a3 3 0 0 1 3 3m3 0a6 6 0 0 1-7.029 5.912c-.563-.097-1.159.026-1.563.43L10.5 17.25H8.25v2.25H6v2.25H2.25v-2.818c0-.597.237-1.17.659-1.591l6.499-6.499c.404-.404.527-1 .43-1.563A6 6 0 1 1 21.75 8.25Z" />
+  </svg>
 );
