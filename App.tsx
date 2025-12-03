@@ -29,6 +29,7 @@ export type Filter = {
 const App: React.FC = () => {
   const [session, setSession] = useState<Session | null>(null);
   const [loadingData, setLoadingData] = useState(false);
+  const [initialFetchComplete, setInitialFetchComplete] = useState(false);
 
   // Modal states
   const [isAddTransactionModalOpen, setAddTransactionModalOpen] = useState(false);
@@ -166,6 +167,7 @@ const App: React.FC = () => {
       console.error('Error fetching data:', error);
     } finally {
       setLoadingData(false);
+      setInitialFetchComplete(true);
     }
   }, [session]);
 
@@ -177,10 +179,11 @@ const App: React.FC = () => {
 
   // Check if first account needs to be created
   useEffect(() => {
-      if (!loadingData && session && accounts.length === 0) {
+      // Only trigger if we have completed the initial fetch and still have no accounts
+      if (initialFetchComplete && session && accounts.length === 0) {
           setFirstAccountModalOpen(true);
       }
-  }, [accounts, loadingData, session]);
+  }, [accounts, initialFetchComplete, session]);
 
   // Generate recurring transactions Logic
   useEffect(() => {
@@ -522,6 +525,7 @@ const App: React.FC = () => {
       setTransactions([]);
       setCategories([]);
       setProfileMenuOpen(false);
+      setInitialFetchComplete(false);
   };
 
   const handleExportCSV = () => {
