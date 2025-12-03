@@ -11,15 +11,20 @@
   "dependencies": {
     "@google/genai": "^0.1.2",
     "@supabase/supabase-js": "^2.39.3",
-    "react": "^18.3.1",
-    "react-dom": "^18.3.1",
+    "react": "18.3.1",
+    "react-dom": "18.3.1",
     "recharts": "^2.15.0"
   },
   "devDependencies": {
-    "@types/react": "^18.3.1",
-    "@types/react-dom": "^18.3.1",
+    "@types/react": "18.3.1",
+    "@types/react-dom": "18.3.1",
+    "@types/node": "^20.11.24",
     "@vitejs/plugin-react": "^4.2.1",
     "typescript": "^5.2.2",
     "vite": "^5.2.0"
+  },
+  "overrides": {
+    "react": "18.3.1",
+    "react-dom": "18.3.1"
   }
 }
